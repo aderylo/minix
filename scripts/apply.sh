@@ -1,4 +1,5 @@
 #!bin/bash
+patch -p1 < ab123456.patch
 
 cd /usr/src/minix/fs/procfs 
 make && make install 

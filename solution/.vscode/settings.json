@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "inc.h": "c",
+        "config.h": "c",
+        "signal.h": "c",
+        "assert.h": "c"
+    }
+}
