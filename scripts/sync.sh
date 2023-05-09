@@ -5,4 +5,4 @@ cd ..
 
 diff -rupNEZbB minix_source/usr/ solution/usr/ > ab123456.patch
 scp ab123456.patch minix:/
-scp scripts/apply.sh minix:/
+scp -r tests minix:/
