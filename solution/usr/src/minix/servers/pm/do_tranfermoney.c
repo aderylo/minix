@@ -7,6 +7,22 @@
 #include <signal.h>
 #include "mproc.h"
 
+#define TRUE 1
+#define FALSE 0
+
+int is_ancestor_of(struct mproc *rmp, pid_t pid)
+{
+  while (rmp->mp_pid != 1)
+  {
+    rmp = &mproc[rmp->mp_parent];
+
+    if (rmp->mp_pid == pid)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 int do_transfermoney(void)
 {
   register struct mproc *rmp = mp;
