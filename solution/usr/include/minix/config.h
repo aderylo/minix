@@ -73,6 +73,10 @@
 #define USER_DEFAULT_CPU	-1 /* use the default cpu or do not change the
 				      current one */
 
+/* mimuw - define max and init balance of proc accounts */
+#define INIT_BALANCE 100
+#define MAX_BALANCE 1000
+
 /*===========================================================================*
  *	There are no user-settable parameters after this line		     *
  *===========================================================================*/
