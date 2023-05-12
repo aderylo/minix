@@ -21,31 +21,31 @@ int is_ancestor_of(struct mproc *rmp, pid_t pid) {
 }
 
 int do_transfermoney(void) {
-  register struct mproc *rmp = mp;
+  register struct mproc *sender_mp = mp;
 
   pid_t recipient_pid = m_in.m_lc_pm_waitpid.pid;
   int amount = m_in.m_lc_pm_waitpid.options;
 
-  struct mproc *recipient_process_mproc = find_proc(recipient_pid);
+  struct mproc *recipient_mp = find_proc(recipient_pid);
 
-  if (is_ancestor_of(rmp, recipient_pid) == OK)
+  if (is_ancestor_of(sender_mp, recipient_pid) == OK)
     return EPERM;
 
-  if (recipient_process_mproc == NULL)
+  if (recipient_mp == NULL)
     return ESRCH;
 
   if (amount < 0)
     return EINVAL;
 
-  if (rmp->account_balance - amount < 0)
+  if (sender_mp->account_balance - amount < 0)
     return EINVAL;
 
-  if (recipient_process_mproc->account_balance + amount > MAX_BALANCE)
+  if (recipient_mp->account_balance + amount > MAX_BALANCE)
     return EINVAL;
 
-  rmp->account_balance -= amount;
-  recipient_process_mproc->account_balance += amount;
-  rmp->mp_reply.m_lc_pm_waitpid.options = rmp->account_balance;
+  sender_mp->account_balance -= amount;
+  recipient_mp->account_balance += amount;
+  sender_mp->mp_reply.m_lc_pm_waitpid.options = sender_mp->account_balance;
 
   return OK;
 }
