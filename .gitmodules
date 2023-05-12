@@ -1,0 +1,3 @@
+[submodule "SO_testy"]
+	path = SO_testy
+	url = https://github.com/MIMUW-Inf-2002/SO_testy.git
