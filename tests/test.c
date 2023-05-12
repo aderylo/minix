@@ -23,7 +23,7 @@ int main() {
   assert(result == -1);
   assert(errno == EINVAL);
 
-  result = transfermoney(1, 200);
+  result = transfermoney(getpid(), 200);
   assert(result == -1);
   assert(errno == EINVAL);
 

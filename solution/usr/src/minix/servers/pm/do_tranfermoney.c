@@ -11,9 +11,8 @@
 
 int is_ancestor_of(struct mproc *rmp, pid_t pid) {
   while (rmp->mp_pid != 1) {
-    printf("%d\n\n", rmp->mp_pid);
     rmp = &mproc[rmp->mp_parent];
-    
+
     if (rmp->mp_pid == pid)
       return OK;
   }
@@ -28,6 +27,9 @@ int do_transfermoney(void) {
   int amount = m_in.m_lc_pm_waitpid.options;
 
   struct mproc *recipient_process_mproc = find_proc(recipient_pid);
+
+  if (is_ancestor_of(rmp, recipient_pid) == OK)
+    return EPERM;
 
   if (recipient_process_mproc == NULL)
     return ESRCH;
