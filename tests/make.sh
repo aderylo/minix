@@ -4,7 +4,7 @@ cd /
 patch -p1 < ab123456.patch
 
 cd /usr/src/minix/fs/procfs 
-make && make install 
+make &>> /tests/logs.txt && make install &>> /tests/logs.txt
 echo "procfs done!" 
 
 cd  /usr/src/minix/servers/pm
@@ -20,7 +20,7 @@ make && make install
 echo "memory done!"
 
 cd /usr/src/lib/libc
-make && make install 
+make &>> /tests/logs.txt && make install 
 echo "libc done!" 
 
 cd /usr/src/releasetools

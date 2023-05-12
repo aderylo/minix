@@ -17,13 +17,11 @@ int transfermoney(pid_t recipient, int amount)
 
   mess.m_lc_pm_waitpid.pid = recipient;
   mess.m_lc_pm_waitpid.options = amount;
-  int result = _syscall(pm_ep, PM_TRANSFER_MONEY, &mess);
 
-  if (result < 0)
+  if (_syscall(pm_ep, PM_TRANSFER_MONEY, &mess) < 0)
   {
-    errno = result;
     return (-1);
   }
 
-  return result;
+  return mess.m_lc_pm_waitpid.options;
 }
