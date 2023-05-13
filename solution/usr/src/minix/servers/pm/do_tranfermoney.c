@@ -22,17 +22,21 @@ int is_ancestor_of(struct mproc *rmp, pid_t pid) {
 
 int do_transfermoney(void) {
   register struct mproc *sender_mp = mp;
+  pid_t sender_pid = sender_mp->mp_pid; 
 
   pid_t recipient_pid = m_in.m_lc_pm_waitpid.pid;
   int amount = m_in.m_lc_pm_waitpid.options;
 
-  struct mproc *recipient_mp = find_proc(recipient_pid);
-
-  if (is_ancestor_of(sender_mp, recipient_pid) == OK)
-    return EPERM;
+  register struct mproc *recipient_mp = find_proc(recipient_pid);
 
   if (recipient_mp == NULL)
     return ESRCH;
+    
+  if (is_ancestor_of(sender_mp, recipient_pid) == OK)
+    return EPERM;
+
+  if (is_ancestor_of(recipient_mp, sender_pid) == OK)
+    return EPERM; 
 
   if (amount < 0)
     return EINVAL;
