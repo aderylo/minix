@@ -69,6 +69,7 @@
 #include <sys/featuretest.h>
 #include <sys/types.h>
 #include <sys/unistd.h>
+#include <stdbool.h>
 
 #if _FORTIFY_SOURCE > 0
 #include <ssp/unistd.h>
@@ -411,7 +412,7 @@ extern	 int optreset;		/* getopt(3) external variable */
 extern	 char *suboptarg;	/* getsubopt(3) external variable */
 #endif
 
-int transfermoney(pid_t recipient, int amount);  
+int sched_deadline(int64_t deadline, int64_t estimate, bool kill);
 
 __END_DECLS
 #endif /* !_UNISTD_H_ */

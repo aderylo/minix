@@ -1,10 +1,18 @@
+#include <assert.h>
+#include <errno.h>
+#include <minix/config.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <lib.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <minix/rs.h>
+#include <stdbool.h>
 
-int transfermoney(pid_t recipient, int amount)
+int sched_deadline(int64_t deadline, int64_t estimate, bool kill)
 {
   message mess;
 
@@ -15,13 +23,15 @@ int transfermoney(pid_t recipient, int amount)
     return (-1);
   }
 
-  mess.m_lc_pm_waitpid.pid = recipient;
-  mess.m_lc_pm_waitpid.options = amount;
+  mess.m_lc_pm_sched.pid = getpid();
+  mess.m_lc_pm_sched.deadline = deadline;
+  mess.m_lc_pm_sched.estimate = estimate;
+  mess.m_lc_pm_sched.kill = kill;
 
   if (_syscall(pm_ep, PM_SCHED_DEADLINE, &mess) < 0)
   {
     return (-1);
   }
 
-  return mess.m_lc_pm_waitpid.options;
+  return 0;
 }

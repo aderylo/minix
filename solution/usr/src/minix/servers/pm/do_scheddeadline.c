@@ -9,47 +9,23 @@
 #include "stdio.h"
 
 
-int is_ancestor_of(struct mproc *rmp, pid_t pid) {
-  while (rmp->mp_pid != 1) {
-    rmp = &mproc[rmp->mp_parent];
-
-    if (rmp->mp_pid == pid)
-      return OK;
-  }
-
-  return (-1);
-}
-
 int do_scheddeadline(void) {
-  register struct mproc *sender_mp = mp;
-  pid_t sender_pid = sender_mp->mp_pid; 
+  register struct mproc *rmp = mp;
 
-  pid_t recipient_pid = m_in.m_lc_pm_waitpid.pid;
-  int amount = m_in.m_lc_pm_waitpid.options;
+  pid_t target_process_pid = m_in.m_lc_pm_sched.pid;
+  int deadline = m_in.m_lc_pm_sched.deadline, estimate = m_in.m_lc_pm_sched.estimate,
+      kill = m_in.m_lc_pm_sched.kill;
 
-  register struct mproc *recipient_mp = find_proc(recipient_pid);
+  struct mproc *process_mproc = find_proc(target_process_pid);
 
-  if (recipient_mp == NULL)
-    return ESRCH;
-    
-  if (is_ancestor_of(sender_mp, recipient_pid) == OK)
-    return EPERM;
+  int now = 100;
+  int already_scheduled = (deadline > -1);
+  int stop_sheduling = (deadline == -1);
 
-  if (is_ancestor_of(recipient_mp, sender_pid) == OK)
-    return EPERM; 
-
-  if (amount < 0)
-    return EINVAL;
-
-  if (sender_mp->account_balance - amount < 0)
-    return EINVAL;
-
-  if (recipient_mp->account_balance + amount > MAX_BALANCE)
-    return EINVAL;
-
-  sender_mp->account_balance -= amount;
-  recipient_mp->account_balance += amount;
-  sender_mp->mp_reply.m_lc_pm_waitpid.options = sender_mp->account_balance;
+  if (!already_scheduled && stop_sheduling) {
+    return EPERM;  // can't stop scheduling if not scheduled
+  }
 
   return OK;
 }
+  

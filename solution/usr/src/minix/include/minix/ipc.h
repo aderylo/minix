@@ -588,6 +588,16 @@ typedef struct {
 _ASSERT_MSG_SIZE(mess_lc_pm_waitpid);
 
 typedef struct {
+	pid_t pid;
+	int64_t deadline;
+	int64_t estimate;
+	int kill; 
+
+	uint8_t padding[32];
+} mess_lc_pm_sched;
+_ASSERT_MSG_SIZE(mess_lc_pm_sched);
+
+typedef struct {
 	cp_grant_id_t grant;
 	vir_bytes tm;			/* struct tm * */
 	int flags;
@@ -2094,6 +2104,7 @@ typedef struct {
 		mess_lc_pm_sysuname	m_lc_pm_sysuname;
 		mess_lc_pm_time		m_lc_pm_time;
 		mess_lc_pm_waitpid	m_lc_pm_waitpid;
+		mess_lc_pm_sched    m_lc_pm_sched; 
 		mess_lc_readclock_rtcdev m_lc_readclock_rtcdev;
 		mess_lc_vfs_chown	m_lc_vfs_chown;
 		mess_lc_vfs_close	m_lc_vfs_close;
