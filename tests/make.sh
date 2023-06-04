@@ -1,22 +1,12 @@
 #!bin/bash
 
 cd /
-patch -p1 < ab123456.patch
-
-cd  /usr/src/minix/servers/sched
-make && make install 
-echo "sched done!" 
-
-cd  /usr/src/minix/servers/pm
-make && make install 
-echo "pm done!"
-
-cd /usr/src/lib/libc
-make && make install 
-echo "libc done!" 
-
-cd /usr/src/releasetools
-make do-hdboot
-echo "releasetools done!"
-
+patch -t -p1 < ab123456.patch
+cd /usr/src; make includes
+cd /usr/src/minix/kernel; make && make install
+cd /usr/src/minix/lib/libsys; make && make install
+cd /usr/src/minix/servers/sched; make && make install
+cd /usr/src/minix/servers/pm; make && make install
+cd /usr/src/lib/libc; make && make install
+cd /usr/src/releasetools; make hdboot
 reboot
