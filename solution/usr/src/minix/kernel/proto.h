@@ -100,7 +100,7 @@ void clear_endpoint(struct proc *rc);
 void clear_ipc_refs(struct proc *rc, int caller_ret);
 void kernel_call_resume(struct proc *p);
 int sched_proc(struct proc *rp, int priority, int quantum, int cpu);
-
+int sched_proc_by_deadline(struct proc *p, int64_t deadline, int64_t estimate, int cpu); 
 /* system/do_vtimer.c */
 void vtimer_check(struct proc *rp);
 

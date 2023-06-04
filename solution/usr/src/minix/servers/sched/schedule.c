@@ -404,7 +404,7 @@ static int schedule_process(struct schedproc * rmp, unsigned flags)
 	else
 		new_cpu = -1;
 
-	if ((err = sys_schedule(rmp->endpoint, new_prio,
+	if ((err = sys_scheddeadline(rmp->endpoint, new_prio,
 		new_quantum, new_cpu)) != OK) {
 		printf("PM: An error occurred when trying to schedule %d: %d\n",
 		rmp->endpoint, err);

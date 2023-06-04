@@ -268,6 +268,7 @@ void system_init(void)
   /* Scheduling */
   map(SYS_SCHEDULE, do_schedule);	/* reschedule a process */
   map(SYS_SCHEDCTL, do_schedctl);	/* change process scheduler */
+  map(SYS_SCHEDDEADLINE, do_schedule); /* reschedule with max before deadline strategy */
 
 }
 /*===========================================================================*
@@ -664,6 +665,68 @@ int sched_proc(struct proc *p,
 	if (quantum != -1) {
 		p->p_quantum_size_ms = quantum;
 		p->p_cpu_time_left = ms_2_cpu_time(quantum);
+	}
+#ifdef CONFIG_SMP
+	if (cpu != -1)
+		p->p_cpu = cpu;
+#endif
+
+	/* Clear the scheduling bit and enqueue the process */
+	RTS_UNSET(p, RTS_NO_QUANTUM);
+
+	return OK;
+}
+
+/*===========================================================================*
+ *                               sched_proc_by_deadline                                  *
+ *===========================================================================*/
+int sched_proc_by_deadline(struct proc *p,
+			int64_t deadline,
+      int64_t estimate,
+			int cpu)
+{
+
+	/* Make sure the values given are within the allowed range.*/
+	// if ((priority < TASK_Q && priority != -1) || priority > NR_SCHED_QUEUES)
+	// 	return(EINVAL);
+
+	// if (quantum < 1 && quantum != -1)
+	// 	return(EINVAL);
+
+#ifdef CONFIG_SMP
+	if ((cpu < 0 && cpu != -1) || (cpu > 0 && (unsigned) cpu >= ncpus))
+		return(EINVAL);
+	if (cpu != -1 && !(cpu_is_ready(cpu)))
+		return EBADCPU;
+#endif
+
+	/* In some cases, we might be rescheduling a runnable process. In such
+	 * a case (i.e. if we are updating the priority) we set the NO_QUANTUM
+	 * flag before the generic unset to dequeue/enqueue the process
+	 */
+
+	/* FIXME this preempts the process, do we really want to do that ?*/
+
+	/* FIXME this is a problem for SMP if the processes currently runs on a
+	 * different CPU */
+	if (proc_is_runnable(p)) {
+#ifdef CONFIG_SMP
+		if (p->p_cpu != cpuid && cpu != -1 && cpu != p->p_cpu) {
+			smp_schedule_migrate_proc(p, cpu);
+		}
+#endif
+
+		RTS_SET(p, RTS_NO_QUANTUM);
+	}
+
+	if (proc_is_runnable(p))
+		RTS_SET(p, RTS_NO_QUANTUM);
+
+	p->p_priority = DEADLINE_Q;
+	
+  if (estimate != -1) {
+		p->p_quantum_size_ms = estimate;
+		p->p_cpu_time_left = ms_2_cpu_time(estimate);
 	}
 #ifdef CONFIG_SMP
 	if (cpu != -1)
