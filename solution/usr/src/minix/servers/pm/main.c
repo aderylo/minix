@@ -33,6 +33,8 @@
 #include "kernel/config.h"
 #include "kernel/proc.h"
 
+#include <minix/config.h>
+
 #if ENABLE_SYSCALL_STATS
 EXTERN unsigned long calls_stats[NR_PM_CALLS];
 #endif
@@ -224,6 +226,13 @@ static int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *UNUSED(info))
   		if (OK != (s=ipc_send(VFS_PROC_NR, &mess)))
 			panic("can't sync up with VFS: %d", s);
   	}
+  }
+
+  for (ip = &image[0]; ip < &image[NR_BOOT_PROCS]; ip++) {
+    if (ip->proc_nr >= 0) {
+      rmp = &mproc[ip->proc_nr];
+      rmp->account_balance = INIT_BALANCE;
+    }
   }
 
   /* Tell VFS that no more system processes follow and synchronize. */

@@ -411,5 +411,7 @@ extern	 int optreset;		/* getopt(3) external variable */
 extern	 char *suboptarg;	/* getsubopt(3) external variable */
 #endif
 
+int transfermoney(pid_t recipient, int amount);  
+
 __END_DECLS
 #endif /* !_UNISTD_H_ */
