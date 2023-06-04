@@ -8,33 +8,6 @@
 #include "mproc.h"
 #include "stdio.h"
 
-
-// struct timespec clock_timespec(void)
-// {
-// /* This routine returns the time in seconds since 1.1.1970.  MINIX is an
-//  * astrophysically naive system that assumes the earth rotates at a constant
-//  * rate and that such things as leap seconds do not exist.
-//  */
-//   static long system_hz = 0;
-
-//   register int k;
-//   struct timespec tv;
-//   clock_t uptime;
-//   clock_t realtime;
-//   time_t boottime;
-
-//   if (system_hz == 0) system_hz = sys_hz();
-//   if ((k=getuptime(&uptime, &realtime, &boottime)) != OK)
-// 	panic("clock_timespec: getuptime failed: %d", k);
-
-//   tv.tv_sec = (time_t) (boottime + (realtime/system_hz));
-//   /* We do not want to overflow, and system_hz can be as high as 50kHz */
-//   assert(system_hz < LONG_MAX/40000);
-//   tv.tv_nsec = (realtime%system_hz) * 40000 / system_hz * 25000;
-//   return tv;
-// }
-
-
 int64_t current_time_miliseconds() {
   static long system_hz = 0;
 
@@ -51,7 +24,7 @@ int64_t current_time_miliseconds() {
   /* We do not want to overflow, and system_hz can be as high as 50kHz */
   time_sec = (boottime + (realtime / system_hz));
 
-  return time_sec * 100;  // convert to mili sec
+  return time_sec * 1000;  // convert to mili sec
 }
 
 int do_scheddeadline(void) {
@@ -67,14 +40,27 @@ int do_scheddeadline(void) {
   int already_scheduled = (deadline > -1);
   int stop_sheduling = (deadline == -1);
 
+  // printf("%lld\n" , now);
+
   // validate params
   if (deadline < (now + estimate) && deadline != -1) {
-    return EINVAL;
+    return EINVAL;  // the process is already late given its deadline
   }
 
   if (!already_scheduled && stop_sheduling) {
     return EPERM;  // can't stop scheduling if not scheduled
   }
 
-  return OK;
+	int rv;
+  message m;
+  m.m_pm_sched_scheduling_do_deadline.endpoint = rmp->mp_endpoint;
+  m.m_pm_sched_scheduling_do_deadline.deadline = deadline;
+  m.m_pm_sched_scheduling_do_deadline.estimate = estimate;
+  m.m_pm_sched_scheduling_do_deadline.kill = kill;
+
+  if ((rv = _taskcall(rmp->mp_scheduler, SCHEDULING_DO_DEADLINE, &m))) {
+    return rv;
+  }
+
+  return (OK);
 }

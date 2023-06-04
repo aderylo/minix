@@ -76,6 +76,8 @@
 /* mimuw - define max and init balance of proc accounts */
 #define INIT_BALANCE 100
 #define MAX_BALANCE 1000
+#define DEADLINE_Q 8
+#define PENALTY_Q 14
 
 /*===========================================================================*
  *	There are no user-settable parameters after this line		     *

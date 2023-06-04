@@ -277,12 +277,65 @@ int do_nice(message *m_ptr)
 		return EINVAL;
 	}
 
+	if (new_q == DEADLINE_Q) {
+		return EINVAL; // reserved queue for max before deadline strategy
+	}
+
 	/* Store old values, in case we need to roll back the changes */
 	old_q     = rmp->priority;
 	old_max_q = rmp->max_priority;
 
 	/* Update the proc entry and reschedule the process */
 	rmp->max_priority = rmp->priority = new_q;
+
+	if ((rv = schedule_process_local(rmp)) != OK) {
+		/* Something went wrong when rescheduling the process, roll
+		 * back the changes to proc struct */
+		rmp->priority     = old_q;
+		rmp->max_priority = old_max_q;
+	}
+
+	return rv;
+}
+
+/*===========================================================================*
+ *				do_deadline					     *
+ *===========================================================================*/
+int do_deadline(message *m_ptr)
+{
+	struct schedproc *rmp;
+	int rv;
+	int proc_nr_n;
+	unsigned new_q, old_q, old_max_q;
+	int64_t deadline, estimate;
+	int kill; 
+
+	/* check who can send you requests */
+	if (!accept_message(m_ptr))
+		return EPERM;
+
+	if (sched_isokendpt(m_ptr->m_pm_sched_scheduling_do_deadline.endpoint, &proc_nr_n) != OK) {
+		printf("SCHED: WARNING: got an invalid endpoint in OoQ msg "
+		"%d\n", m_ptr->m_pm_sched_scheduling_do_deadline.endpoint);
+		return EBADEPT;
+	}
+
+	rmp = &schedproc[proc_nr_n];
+	new_q = DEADLINE_Q;
+	deadline = m_ptr->m_pm_sched_scheduling_do_deadline.deadline;
+	estimate = m_ptr->m_pm_sched_scheduling_do_deadline.estimate;
+	kill = m_ptr->m_pm_sched_scheduling_do_deadline.kill;
+	/* TODO validate params */
+
+	/* Store old values, in case we need to roll back the changes */
+	old_q     = rmp->priority;
+	old_max_q = rmp->max_priority;
+
+	/* Update the proc entry and reschedule the process */
+	rmp->max_priority = rmp->priority = new_q;
+	rmp->deadline = deadline;
+	rmp->estimate = estimate; 
+	rmp->kill = kill; 
 
 	if ((rv = schedule_process_local(rmp)) != OK) {
 		/* Something went wrong when rescheduling the process, roll
@@ -356,6 +409,8 @@ static void balance_queues(minix_timer_t *tp)
 
 	for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
 		if (rmp->flags & IN_USE) {
+			if(rmp->priority == DEADLINE_Q + 1)
+				continue; // don't enter the deadline queue when rebalancing
 			if (rmp->priority > rmp->max_priority) {
 				rmp->priority -= 1; /* increase priority */
 				schedule_process_local(rmp);

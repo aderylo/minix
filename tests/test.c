@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
+
 /*
   int sched_deadline(int64_t deadline, int64_t estimate, bool kill);
 */
@@ -21,6 +22,8 @@ int main()
   // bad deadline arg, i.e. deadline < (now )
   assert(sched_deadline(0, 10, false) == -1);
   assert(errno == EINVAL);
+
+  assert(sched_deadline(1686138424000, 100, true) == 0);
 
   return 0;
 }
