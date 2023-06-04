@@ -35,7 +35,8 @@ EXTERN struct schedproc {
 								to run on */
 	int64_t deadline;
 	int64_t estimate;
-	int kill; 
+	int kill;
+	unsigned previous_priority; 
 } schedproc[NR_PROCS];
 
 /* Flag values */

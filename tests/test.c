@@ -23,7 +23,19 @@ int main()
   assert(sched_deadline(0, 10, false) == -1);
   assert(errno == EINVAL);
 
-  assert(sched_deadline(1686138424000, 100, true) == 0);
+  // start being scheduling with custom strategy
+  assert(sched_deadline(1686138424000, 100, false) == 0);
 
-  return 0;
+  // resign from this strategy
+  assert(sched_deadline(-1, 0, false) == -1);
+
+  // wait to get killed
+  assert(sched_deadline(1686138424000, 1, true) == 0); 
+
+  int x = 0; 
+  while(true){
+    x + x; 
+  }
+
+  return x;
 }

@@ -13,6 +13,7 @@
 #include <minix/com.h>
 #include <machine/archtypes.h>
 #include "kernel/proc.h" /* for queue constants */
+#include <unistd.h>
 
 static minix_timer_t sched_timer;
 static unsigned balance_timeout;
@@ -99,8 +100,22 @@ int do_noquantum(message *m_ptr)
 	}
 
 	rmp = &schedproc[proc_nr_n];
-	if (rmp->priority < MIN_USER_Q) {
+
+  /* Deadline stategy */
+	if (rmp->priority == DEADLINE_Q && rmp->kill){
+		sys_kill(rmp->endpoint, SIGKILL);
+		return OK; 
+	}
+  else if(rmp->priority == DEADLINE_Q){
+    rmp->priority = PENALTY_Q; 
+  }
+	else if (rmp->priority < MIN_USER_Q) {
 		rmp->priority += 1; /* lower priority */
+
+    /* avoid geting into a deadline queue */
+		if(rmp->priority == DEADLINE_Q){
+      rmp->priority += 1; 
+    } 
 	}
 
 	if ((rv = schedule_process_local(rmp)) != OK) {
@@ -174,10 +189,13 @@ int do_start_scheduling(message *m_ptr)
 	if (rmp->endpoint == rmp->parent) {
 		/* We have a special case here for init, which is the first
 		   process scheduled, and the parent of itself. */
-		rmp->priority   = USER_Q;
-		rmp->time_slice = DEFAULT_USER_TIME_SLICE;
+                rmp->priority = rmp->previous_priority = USER_Q;  // i.e. DEADLINE_Q + 1
+                rmp->time_slice = DEFAULT_USER_TIME_SLICE;
+                rmp->deadline = -1;
+                rmp->estimate = -1;
+                rmp->kill = 0;
 
-		/*
+                /*
 		 * Since kernel never changes the cpu of a process, all are
 		 * started on the BSP and the userspace scheduling hasn't
 		 * changed that yet either, we can be sure that BSP is the
@@ -208,8 +226,12 @@ int do_start_scheduling(message *m_ptr)
 			return rv;
 
 		rmp->priority = schedproc[parent_nr_n].priority;
+    rmp->previous_priority = rmp->previous_priority; 
 		rmp->time_slice = schedproc[parent_nr_n].time_slice;
-		break;
+                rmp->deadline = schedproc[parent_nr_n].deadline;
+                rmp->estimate = schedproc[parent_nr_n].estimate;
+                rmp->kill = schedproc[parent_nr_n].kill;
+                break;
 		
 	default: 
 		/* not reachable */
@@ -327,24 +349,34 @@ int do_deadline(message *m_ptr)
 	kill = m_ptr->m_pm_sched_scheduling_do_deadline.kill;
 	/* TODO validate params */
 
+  /* switch back to old scheduling strategy */
+  if(deadline == -1){ 
+    rmp->deadline = -1; 
+    rmp->priority = rmp->previous_priority;
+
+    return schedule_process_local(rmp); 
+  }
+
+
 	/* Store old values, in case we need to roll back the changes */
 	old_q     = rmp->priority;
 	old_max_q = rmp->max_priority;
 
 	/* Update the proc entry and reschedule the process */
 	rmp->max_priority = rmp->priority = new_q;
+	rmp->estimate = rmp->time_slice = estimate; 
 	rmp->deadline = deadline;
-	rmp->estimate = estimate; 
-	rmp->kill = kill; 
-
+	rmp->kill = kill;
+  rmp->previous_priority = old_q; 
+   
 	if ((rv = schedule_process_local(rmp)) != OK) {
 		/* Something went wrong when rescheduling the process, roll
 		 * back the changes to proc struct */
 		rmp->priority     = old_q;
 		rmp->max_priority = old_max_q;
 	}
-
-	return rv;
+  
+  return rv;
 }
 
 /*===========================================================================*
