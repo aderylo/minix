@@ -4,6 +4,7 @@
         "mproc.h": "c",
         "pm.h": "c",
         "com.h": "c",
-        "lib.h": "c"
+        "lib.h": "c",
+        "system.h": "c"
     }
 }

@@ -19,8 +19,8 @@ int main()
   assert(errno == EPERM);
 
   // bad deadline arg, i.e. deadline < (now )
-  //  assert(sched_deadline(0, 10, false) == -1);
-  //  assert(errno == EINVAL);
+  assert(sched_deadline(0, 10, false) == -1);
+  assert(errno == EINVAL);
 
   return 0;
 }
