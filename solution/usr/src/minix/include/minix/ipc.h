@@ -1004,6 +1004,16 @@ typedef struct {
 _ASSERT_MSG_SIZE(mess_lsys_krn_schedule);
 
 typedef struct {
+	endpoint_t endpoint;
+	int64_t deadline;
+	int64_t estimate; 
+	int cpu;
+
+	uint8_t padding[32];
+} mess_lsys_krn_scheddeadline;
+_ASSERT_MSG_SIZE(mess_lsys_krn_scheddeadline);
+
+typedef struct {
 	int how;
 
 	uint8_t padding[52];
@@ -2160,6 +2170,7 @@ typedef struct {
 		mess_lsys_kern_safecopy	m_lsys_kern_safecopy;
 		mess_lsys_krn_schedctl	m_lsys_krn_schedctl;
 		mess_lsys_krn_schedule	m_lsys_krn_schedule;
+		mess_lsys_krn_scheddeadline	m_lsys_krn_scheddeadline;
 		mess_lsys_krn_sys_abort m_lsys_krn_sys_abort;
 		mess_lsys_krn_sys_clear m_lsys_krn_sys_clear;
 		mess_lsys_krn_sys_copy	m_lsys_krn_sys_copy;

@@ -9,9 +9,9 @@ int do_scheddeadline(struct proc * caller, message * m_ptr)
 {
 	struct proc *p;
 	int proc_nr;
-	int priority, quantum, cpu;
+	int deadline, estimate, cpu;
 
-	if (!isokendpt(m_ptr->m_lsys_krn_schedule.endpoint, &proc_nr))
+	if (!isokendpt(m_ptr->m_lsys_krn_scheddeadline.endpoint, &proc_nr))
 		return EINVAL;
 
 	p = proc_addr(proc_nr);
@@ -21,9 +21,9 @@ int do_scheddeadline(struct proc * caller, message * m_ptr)
 		return(EPERM);
 
 	/* Try to schedule the process. */
-	priority = m_ptr->m_lsys_krn_schedule.priority;
-	quantum = m_ptr->m_lsys_krn_schedule.quantum;
-	cpu = m_ptr->m_lsys_krn_schedule.cpu;
+	deadline = m_ptr->m_lsys_krn_scheddeadline.deadline;
+	estimate = m_ptr->m_lsys_krn_scheddeadline.estimate;
+	cpu = m_ptr->m_lsys_krn_scheddeadline.cpu;
 
-	return sched_proc(p, priority, quantum, cpu);
+	return sched_proc_by_deadline(p, deadline, estimate, cpu);
 }

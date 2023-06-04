@@ -41,7 +41,7 @@ int sys_schedule(endpoint_t proc_ep, int priority, int quantum, int
 	cpu);
 int sys_schedctl(unsigned flags, endpoint_t proc_ep, int priority, int
 	quantum, int cpu);
-int sys_scheddeadline(endpoint_t proc_ep, int priority, int quantum, int
+int sys_scheddeadline(endpoint_t proc_ep, int64_t deadline, int64_t estimate, int
 	cpu);
 	
 /* Shorthands for sys_runctl() system call. */
