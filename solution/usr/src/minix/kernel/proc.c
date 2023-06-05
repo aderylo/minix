@@ -1523,6 +1523,117 @@ asyn_error:
 /*===========================================================================*
  *				enqueue					     * 
  *===========================================================================*/
+uint64_t get_timestamp_ms(void) {
+    uint64_t realtime = get_realtime();
+    return realtime * 1000 / system_hz + boottime * 1000;
+}
+
+void refresh_relative_values(struct proc **rdy_head){
+	if(rdy_head[DEADLINE_Q])
+		rdy_head[DEADLINE_Q]->p_prevready = NULL; 
+
+	struct proc *p = rdy_head[DEADLINE_Q];
+	int64_t estimated_start = get_timestamp_ms();
+  
+	while(p){
+		p->estimated_end = estimated_start + p->estimate; 
+		if(p->p_nextready){
+			p->p_nextready->p_prevready = p; 
+		}
+		p = p->p_nextready; 
+	}
+}
+
+void enqueue_max_before_deadline(struct proc *rp, struct proc **rdy_head, struct proc **rdy_tail){
+
+  /* Now add the process to the queue. */
+  if (!rdy_head[DEADLINE_Q]) {		/* add to empty queue */
+      rdy_head[DEADLINE_Q] = rdy_tail[DEADLINE_Q] = rp; 		/* create a new queue */
+      rp->p_nextready = NULL;		/* mark new end */
+  }
+  else {
+	int now = get_timestamp_ms();
+
+	refresh_relative_values(rdy_head);
+
+	/* find kth proc*/
+	int64_t min_time_till_deadline, time_till_deadline; 
+	struct proc *p =  rdy_head[DEADLINE_Q];
+	struct proc *p_kth = NULL;
+
+	while(p && p->estimated_end <= p->deadline){
+		p_kth = p; 
+		p = p->p_nextready; 
+	}  
+	
+	if(p_kth){
+		min_time_till_deadline = INT64_MAX; 
+		p = p_kth;
+		
+		/* get last proc behdind which we can potentialy insert and make k+1
+			before deadline. */
+
+		while(p && (p->estimated_end + rp->estimate) > rp->deadline){
+			time_till_deadline = p->estimated_end - p->deadline; 
+
+			if(time_till_deadline < min_time_till_deadline){
+				min_time_till_deadline = time_till_deadline; 
+			}
+			p = p->p_prevready;
+		}
+
+		if(p && (min_time_till_deadline > rp->estimate)){
+			// we can insert behind some proc
+			if(p->p_nextready == NULL){
+				rdy_tail[DEADLINE_Q] = rp; 		
+			}
+		
+			rp->p_nextready = p->p_nextready;
+			p->p_nextready = rp;
+			return;  
+		}
+
+		if(p == NULL && (min_time_till_deadline > rp->estimate)){
+			// last place where we can insert is begining of the queue
+		
+			rp->p_nextready = rdy_head[DEADLINE_Q];
+			rdy_head[DEADLINE_Q] = rp;
+			return;  
+		}
+	}
+
+
+	p = rdy_tail[DEADLINE_Q];
+	min_time_till_deadline = time_till_deadline = INT64_MAX;   
+	while(p && p->estimate > rp->estimate){
+		if(p->deadline >= p->estimated_end)
+			time_till_deadline = p->deadline - p->estimated_end;
+		
+		if(time_till_deadline < min_time_till_deadline)
+			min_time_till_deadline = time_till_deadline; 
+
+		p = p->p_prevready; 
+	}
+
+	if(p && min_time_till_deadline > rp->estimate){
+		if(p->p_nextready == NULL){
+			rdy_tail[DEADLINE_Q] = rp; 		
+		}
+
+		rp->p_nextready = p->p_nextready;
+		p->p_nextready = rp;
+		return; 
+	}
+	else{
+		// insert at tail 
+		rdy_tail[DEADLINE_Q]->p_nextready = rp;
+		rdy_tail[DEADLINE_Q] = rp;
+		rp->p_nextready = NULL;
+		return; 
+	}
+  }
+}
+
 void enqueue(
   register struct proc *rp	/* this process is now runnable */
 )
@@ -1545,8 +1656,10 @@ void enqueue(
   rdy_head = get_cpu_var(rp->p_cpu, run_q_head);
   rdy_tail = get_cpu_var(rp->p_cpu, run_q_tail);
 
-  /* Now add the process to the queue. */
-  if (!rdy_head[q]) {		/* add to empty queue */
+	if(q == DEADLINE_Q){
+    enqueue_max_before_deadline(rp, rdy_head, rdy_tail); 
+  } /* Now add the process to the queue. */
+  else if (!rdy_head[q]) {		/* add to empty queue */
       rdy_head[q] = rdy_tail[q] = rp; 		/* create a new queue */
       rp->p_nextready = NULL;		/* mark new end */
   } 

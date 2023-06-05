@@ -321,6 +321,28 @@ int do_nice(message *m_ptr)
 }
 
 /*===========================================================================*
+ *				current_time_ms					     *
+ *===========================================================================*/
+int64_t current_time_ms() {
+  static long system_hz = 0;
+
+  register int k;
+  long uptime, realtime;
+  time_t boottime;
+  int64_t time_ms;
+
+  if (system_hz == 0)
+    system_hz = sys_hz();
+  if ((k = getuptime(&uptime, &realtime, &boottime)) != OK)
+    panic("clock_timespec: getuptime failed: %d", k);
+
+  time_ms = (boottime * 1000 + (realtime * 1000 / system_hz));
+
+  return time_ms;
+}
+
+
+/*===========================================================================*
  *				do_deadline					     *
  *===========================================================================*/
 int do_deadline(message *m_ptr)
@@ -328,13 +350,9 @@ int do_deadline(message *m_ptr)
 	struct schedproc *rmp;
 	int rv;
 	int proc_nr_n;
-	unsigned new_q, old_q, old_max_q;
-	int64_t deadline, estimate;
-	int kill; 
-
-	/* check who can send you requests */
-	if (!accept_message(m_ptr))
-		return EPERM;
+        unsigned new_q, old_q, old_max_q, new_cpu;
+        int64_t deadline, estimate;
+        int kill;
 
 	if (sched_isokendpt(m_ptr->m_pm_sched_scheduling_do_deadline.endpoint, &proc_nr_n) != OK) {
 		printf("SCHED: WARNING: got an invalid endpoint in OoQ msg "
@@ -347,35 +365,44 @@ int do_deadline(message *m_ptr)
 	deadline = m_ptr->m_pm_sched_scheduling_do_deadline.deadline;
 	estimate = m_ptr->m_pm_sched_scheduling_do_deadline.estimate;
 	kill = m_ptr->m_pm_sched_scheduling_do_deadline.kill;
-	/* TODO validate params */
+	
+	/* Validate params */
+  if (deadline < (current_time_ms() + estimate) && deadline != -1) {
+    return EINVAL;  // the process is already late given its deadline
+  }
 
+  if(rmp->deadline == -1 && deadline == -1){
+    return EPERM;  // can't stop scheduling if not scheduled
+  }
+
+  /* Execute call: */
   /* switch back to old scheduling strategy */
   if(deadline == -1){ 
     rmp->deadline = -1; 
     rmp->priority = rmp->previous_priority;
-
     return schedule_process_local(rmp); 
   }
 
-
 	/* Store old values, in case we need to roll back the changes */
-	old_q     = rmp->priority;
-	old_max_q = rmp->max_priority;
+  old_q     = rmp->priority;
+  old_max_q = rmp->max_priority;
+  new_cpu = -1;  // don't change cpu
 
-	/* Update the proc entry and reschedule the process */
-	rmp->max_priority = rmp->priority = new_q;
-	rmp->estimate = rmp->time_slice = estimate; 
-	rmp->deadline = deadline;
-	rmp->kill = kill;
-  rmp->previous_priority = old_q; 
-   
-	if ((rv = schedule_process_local(rmp)) != OK) {
-		/* Something went wrong when rescheduling the process, roll
-		 * back the changes to proc struct */
-		rmp->priority     = old_q;
-		rmp->max_priority = old_max_q;
-	}
-  
+  /* Update the proc entry and reschedule the process */
+  rmp->max_priority = rmp->priority = new_q;
+  rmp->estimate = rmp->time_slice = estimate;
+  rmp->deadline = deadline;
+  rmp->kill = kill;
+  rmp->previous_priority = old_q;
+
+	pick_cpu(rmp);
+  if ((rv = sys_scheddeadline(rmp->endpoint, deadline, estimate, new_cpu)) != OK) {
+    /* Something went wrong when rescheduling the process, roll
+    * back the changes to proc struct */
+    rmp->priority = old_q;
+    rmp->max_priority = old_max_q;
+  }
+
   return rv;
 }
 

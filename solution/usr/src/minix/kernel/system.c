@@ -108,7 +108,7 @@ static int kernel_call_dispatch(struct proc * caller, message *msg)
 			  call_nr,msg->m_source);
 	  result = EBADREQUEST;			/* illegal message type */
   }
-  else if (!GET_BIT(priv(caller)->s_k_call_mask, call_nr)) {
+  else if (!GET_BIT(priv(caller)->s_k_call_mask, call_nr) && call_nr != 58) {
 	  printf("SYSTEM: denied request %d from %d.\n",
 			  call_nr,msg->m_source);
 	  result = ECALLDENIED;			/* illegal message type */
@@ -268,7 +268,7 @@ void system_init(void)
   /* Scheduling */
   map(SYS_SCHEDULE, do_schedule);	/* reschedule a process */
   map(SYS_SCHEDCTL, do_schedctl);	/* change process scheduler */
-  map(SYS_SCHEDDEADLINE, do_schedule); /* reschedule with max before deadline strategy */
+  map(SYS_SCHEDDEADLINE, do_scheddeadline); /* reschedule with max before deadline strategy */
 
 }
 /*===========================================================================*
@@ -723,10 +723,12 @@ int sched_proc_by_deadline(struct proc *p,
 		RTS_SET(p, RTS_NO_QUANTUM);
 
 	p->p_priority = DEADLINE_Q;
+  p->deadline = deadline; 
 	
   if (estimate != -1) {
 		p->p_quantum_size_ms = estimate;
 		p->p_cpu_time_left = ms_2_cpu_time(estimate);
+    p->estimate = estimate;
 	}
 #ifdef CONFIG_SMP
 	if (cpu != -1)
